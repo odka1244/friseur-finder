@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FriseurFinder – Die besten Friseure in deiner Stadt</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .star-filled { color: #f59e0b; }
+    .star-empty { color: #d1d5db; }
+    .modal-enter { animation: fadeIn 0.2s ease-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1); }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+          <i class="fas fa-scissors text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-gray-900">FriseurFinder</h1>
+          <p class="text-xs text-gray-500">Die besten Friseure in deiner Stadt</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <label for="citySelect" class="text-sm font-medium text-gray-700 whitespace-nowrap">
+          <i class="fas fa-map-marker-alt text-indigo-500 mr-1"></i> Stadt:
+        </label>
+        <select id="citySelect" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white min-w-[160px]">
+          <option value="berlin">Berlin</option>
+          <option value="muenchen">München</option>
+          <option value="hamburg">Hamburg</option>
+          <option value="koeln">Köln</option>
+          <option value="frankfurt">Frankfurt</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-5xl mx-auto px-4 py-6">
+    <!-- Ranking Info -->
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900">
+          Top-Friseure in <span id="currentCityName" class="text-indigo-600">Berlin</span>
+        </h2>
+        <p class="text-sm text-gray-500">Sortiert nach Bewertung · Klicke auf einen Eintrag für Details</p>
+      </div>
+      <div class="text-sm text-gray-500">
+        <i class="fas fa-star text-amber-400"></i> Basierend auf Kundenbewertungen
+      </div>
+    </div>
+
+    <!-- List -->
+    <div id="salonList" class="space-y-3">
+      <!-- Cards werden per JS eingefügt -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden text-center py-16">
+      <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+      <p class="text-gray-500">Keine Friseure gefunden.</p>
+    </div>
+  </main>
+
+  <!-- Detail Modal -->
+  <div id="detailModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/50">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto modal-enter">
+      <div class="p-6">
+        <!-- Header -->
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 id="modalName" class="text-xl font-bold text-gray-900"></h3>
+            <div id="modalRating" class="flex items-center gap-1 mt-1"></div>
+          </div>
+          <button id="closeModal" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+
+        <!-- Details -->
+        <div class="space-y-4 text-sm">
+          <div class="flex items-start gap-3">
+            <i class="fas fa-map-marker-alt text-indigo-500 mt-0.5 w-5"></i>
+            <div>
+              <p class="font-medium text-gray-700">Adresse</p>
+              <p id="modalAddress" class="text-gray-600"></p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <i class="fas fa-phone text-indigo-500 mt-0.5 w-5"></i>
+            <div>
+              <p class="font-medium text-gray-700">Telefon</p>
+              <a id="modalPhone" href="#" class="text-indigo-600 hover:underline"></a>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <i class="fas fa-clock text-indigo-500 mt-0.5 w-5"></i>
+            <div>
+              <p class="font-medium text-gray-700 mb-1">Öffnungszeiten</p>
+              <div id="modalHours" class="text-gray-600 space-y-0.5"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="mt-6 pt-4 border-t border-gray-100">
+          <a id="modalCallBtn" href="#" class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white text-center font-medium py-3 rounded-xl transition">
+            <i class="fas fa-phone mr-2"></i> Anrufen & Termin vereinbaren
+          </a>
+          <p class="text-xs text-center text-gray-400 mt-2">Öffnet die Telefon-App auf deinem Gerät</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Beispieldaten – in einer echten App würden diese aus einer API kommen
+    const salonsByCity = {
+      berlin: [
+        {
+          id: 1,
+          name: "Schnittwerk Berlin",
+          rating: 4.9,
+          reviews: 312,
+          address: "Torstraße 45, 10115 Berlin",
+          phone: "+49 30 12345678",
+          hours: {
+            "Mo–Fr": "09:00 – 19:00",
+            "Sa": "10:00 – 16:00",
+            "So": "Geschlossen"
+          }
+        },
+        {
+          id: 2,
+          name: "Hair & Style Mitte",
+          rating: 4.8,
+          reviews: 287,
+          address: "Friedrichstraße 120, 10117 Berlin",
+          phone: "+49 30 87654321",
+          hours: {
+            "Mo–Fr": "08:30 – 20:00",
+            "Sa": "09:00 – 18:00",
+            "So": "Geschlossen"
+          }
+        },
+        {
+          id: 3,
+          name: "Salon Aurora",
+          rating: 4.7,
+          reviews: 198,
+          address: "Kastanienallee 22, 10435 Berlin",
+          phone: "+49 30 11223344",
+          hours: {
+            "Di–Fr": "10:00 – 19:00",
+            "Sa": "10:00 – 15:00",
+            "So–Mo": "Geschlossen"
+          }
+        },
+        {
+          id: 4,
+          name: "Barbershop Kreuzberg",
+          rating: 4.6,
+          reviews: 421,
+          address: "Oranienstraße 88, 10969 Berlin",
+          phone: "+49 30 55667788",
+          hours: {
+            "Mo–Sa": "10:00 – 20:00",
+            "So": "12:00 – 18:00"
+          }
+        },
+        {
+          id: 5,
+          name: "Frisör Atelier Prenzlauer Berg",
+          rating: 4.5,
+          reviews: 156,
+          address: "Schönhauser Allee 130, 10437 Berlin",
+          phone: "+49 30 99887766",
+          hours: {
+            "Mo–Fr": "09:00 – 18:30",
+            "Sa": "09:00 – 14:00",
+            "So": "Geschlossen"
+          }
+        }
+      ],
+      muenchen: [
+        {
+          id: 1,
+          name: "Haarwerk München",
+          rating: 4.9,
+          reviews: 245,
+          address: "Maximilianstraße 18, 80539 München",
+          phone: "+49 89 12345678",
+          hours: {
+            "Mo–Fr": "09:00 – 19:00",
+            "Sa": "09:00 – 16:00",
+            "So": "Geschlossen"
+          }
+        },
+        {
+          id: 2,
+          name: "Salon Ludwig",
+          rating: 4.8,
+          reviews: 189,
+          address: "Ludwigstraße 12, 80539 München",
+          phone: "+49 89 87654321",
+          hours: {
+            "Di–Fr": "10:00 – 20:00",
+            "Sa": "09:00 – 15:00",
+            "So–Mo": "Geschlossen"
+          }
+        },
+        {
+          id: 3,
+          name: "Schnittpunkt Schwabing",
+          rating: 4.7,
+          reviews: 167,
+          address: "Leopoldstraße 55, 80802 München",
+          phone: "+49 89 33445566",
+          hours: {
+            "Mo–Fr": "08:00 – 18:00",
+            "Sa": "09:00 – 14:00",
+            "So": "Geschlossen"
+          }
+        },
+        {
+          id: 4,
+          name: "Barber & Co. Glockenbach",
+          rating: 4.6,
+          reviews: 302,
+          address: "Müllerstraße 7, 80469 München",
+          phone: "+49 89 77889900",
+          hours: {
+            "Mo–Sa": "10:00 – 19:00",
+            "So": "Geschlossen"
+          }
+        }
+      ],
+      hamburg: [
+        {
+          id: 1,
+          name: "Hafenschnitt Hamburg",
+          rating: 4.9,
+          reviews: 278,
+          address: "Reeperbahn 120, 20359 Hamburg",
+          phone: "+49 40 12345678",
+          hours: {
+            "Mo–Fr": "09:00 – 20:00",
+            "Sa": "10:00 – 18:00",
+            "So": "Geschlossen"
+          }
+        },
+        {
+          id: 2,
+          name: "Salon Alster",
+          rating: 4.8,
+          reviews: 211,
+          address: "Jungfernstieg 15, 20354 Hamburg",
+          phone: "+49 40 87654321",
+          hours: {
+            "Mo–Fr": "09:00 – 19:00",
+            "Sa": "09:00 – 15:00",
+            "So": "Geschlossen"
+          }
+        },
+        {
+          id: 3,
+          name: "Friseur St. Pauli",
+          rating: 4.6,
+          reviews: 145,
+          address: "Große Freiheit 22, 22767 Hamburg",
+          phone: "+49 40 55667788",
+          hours: {
+            "Di–Sa": "10:00 – 19:00",
+            "So–Mo": "Geschlossen"
+          }
+        }
+      ],
+      koeln: [
+        {
+          id: 1,
+          name: "Kölner Haarstudio",
+          rating: 4.9,
+          reviews: 198,
+          address: "Schildergasse 40, 50667 Köln",
+          phone: "+49 221 12345678",
+          hours: {
+            "Mo–Fr": "09:00 – 19:00",
+            "Sa": "09:00 – 16:00",
+            "So": "Geschlossen"
+          }
+        },
+        {
+          id: 2,
+          name: "Salon Dom",
+          rating: 4.7,
+          reviews: 167,
+          address: "Hohe Straße 88, 50667 Köln",
+          phone: "+49 221 87654321",
+          hours: {
+            "Mo–Sa": "10:00 – 18:00",
+            "So": "Geschlossen"
+          }
+        },
+        {
+          id: 3,
+          name: "Barbershop Ehrenfeld",
+          rating: 4.6,
+          reviews: 234,
+          address: "Venloer Straße 210, 50823 Köln",
+          phone: "+49 221 33445566",
+          hours: {
+            "Mo–Fr": "09:00 – 20:00",
+            "Sa": "10:00 – 17:00",
+            "So": "Geschlossen"
+          }
+        }
+      ],
+      frankfurt: [
+        {
+          id: 1,
+          name: "Skyline Hair",
+          rating: 4.9,
+          reviews: 176,
+          address: "Zeil 80, 60313 Frankfurt",
+          phone: "+49 69 12345678",
+          hours: {
+            "Mo–Fr": "09:00 – 19:00",
+            "Sa": "09:00 – 16:00",
+            "So": "Geschlossen"
+          }
+        },
+        {
+          id: 2,
+          name: "Salon Main",
+          rating: 4.8,
+          reviews: 143,
+          address: "Goethestraße 12, 60313 Frankfurt",
+          phone: "+49 69 87654321",
+          hours: {
+            "Di–Fr": "10:00 – 20:00",
+            "Sa": "09:00 – 15:00",
+            "So–Mo": "Geschlossen"
+          }
+        },
+        {
+          id: 3,
+          name: "Frisör Sachsenhausen",
+          rating: 4.5,
+          reviews: 98,
+          address: "Schweizer Straße 30, 60594 Frankfurt",
+          phone: "+49 69 55667788",
+          hours: {
+            "Mo–Fr": "09:00 – 18:00",
+            "Sa": "09:00 – 13:00",
+            "So": "Geschlossen"
+          }
+        }
+      ]
+    };
+
+    const cityNames = {
+      berlin: "Berlin",
+      muenchen: "München",
+      hamburg: "Hamburg",
+      koeln: "Köln",
+      frankfurt: "Frankfurt"
+    };
+
+    const citySelect = document.getElementById("citySelect");
+    const salonList = document.getElementById("salonList");
+    const currentCityName = document.getElementById("currentCityName");
+    const emptyState = document.getElementById("emptyState");
+    const detailModal = document.getElementById("detailModal");
+    const closeModal = document.getElementById("closeModal");
+
+    function renderStars(rating) {
+      const full = Math.floor(rating);
+      const half = rating % 1 >= 0.5;
+      let html = "";
+      for (let i = 0; i < 5; i++) {
+        if (i < full) {
+          html += '<i class="fas fa-star star-filled text-sm"></i>';
+        } else if (i === full && half) {
+          html += '<i class="fas fa-star-half-alt star-filled text-sm"></i>';
+        } else {
+          html += '<i class="far fa-star star-empty text-sm"></i>';
+        }
+      }
+      return html;
+    }
+
+    function renderList(cityKey) {
+      const salons = salonsByCity[cityKey] || [];
+      currentCityName.textContent = cityNames[cityKey] || cityKey;
+
+      if (salons.length === 0) {
+        salonList.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        return;
+      }
+      emptyState.classList.add("hidden");
+
+      salonList.innerHTML = salons
+        .sort((a, b) => b.rating - a.rating)
+        .map((salon, index) => `
+          <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover transition cursor-pointer flex items-center gap-4"
+               onclick="openDetail('${cityKey}', ${salon.id})">
+            <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-sm">
+              ${index + 1}
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-gray-900 truncate">${salon.name}</h3>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="flex items-center gap-0.5">${renderStars(salon.rating)}</span>
+                <span class="text-sm font-medium text-gray-700">${salon.rating.toFixed(1)}</span>
+                <span class="text-sm text-gray-400">(${salon.reviews} Bewertungen)</span>
+              </div>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300"></i>
+          </div>
+        `)
+        .join("");
+    }
+
+    function openDetail(cityKey, salonId) {
+      const salon = (salonsByCity[cityKey] || []).find(s => s.id === salonId);
+      if (!salon) return;
+
+      document.getElementById("modalName").textContent = salon.name;
+      document.getElementById("modalRating").innerHTML = `
+        ${renderStars(salon.rating)}
+        <span class="ml-1 text-sm font-medium text-gray-700">${salon.rating.toFixed(1)}</span>
+        <span class="text-sm text-gray-400">(${salon.reviews})</span>
+      `;
+      document.getElementById("modalAddress").textContent = salon.address;
+      const phoneLink = document.getElementById("modalPhone");
+      phoneLink.textContent = salon.phone;
+      phoneLink.href = `tel:${salon.phone.replace(/\s/g, "")}`;
+      document.getElementById("modalCallBtn").href = `tel:${salon.phone.replace(/\s/g, "")}`;
+
+      const hoursHtml = Object.entries(salon.hours)
+        .map(([day, time]) => `<div class="flex justify-between gap-4"><span class="text-gray-500 w-20">${day}</span><span>${time}</span></div>`)
+        .join("");
+      document.getElementById("modalHours").innerHTML = hoursHtml;
+
+      detailModal.classList.remove("hidden");
+      detailModal.classList.add("flex");
+    }
+
+    function closeDetail() {
+      detailModal.classList.add("hidden");
+      detailModal.classList.remove("flex");
+    }
+
+    citySelect.addEventListener("change", (e) => renderList(e.target.value));
+    closeModal.addEventListener("click", closeDetail);
+    detailModal.addEventListener("click", (e) => {
+      if (e.target === detailModal) closeDetail();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeDetail();
+    });
+
+    // Initial load
+    renderList("berlin");
+  </script>
+</body>
+</html>
